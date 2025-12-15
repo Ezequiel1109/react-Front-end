@@ -3,13 +3,13 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  // root: 'public',  
+  // root: 'publi c',  
   plugins: [react()],
   server: {
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:64410',
         changeOrigin: true,
         /* secure: false, */
         configure: (proxy) => {
@@ -22,6 +22,7 @@ export default defineConfig({
       },
     },
   },
+  logLevel: 'silent' | 'error' | 'warn' | 'info',
   base: "./",
   test: {
     globals: true,

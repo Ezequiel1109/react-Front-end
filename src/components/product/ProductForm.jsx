@@ -1,118 +1,97 @@
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
+import { useForm } from "react-hook-form";
+import * as yup from "yup";
+import { yupResolver } from "@hookform/resolvers/yup";
+
+// Esquema de validacion con Yup
+const schema = yup.object().shape({
+  name: yup
+    .string()
+    .required("El nombre es obligatorio")
+    .min(3, "El nombre debe tener al menos 3 caracteres"),
+  price: yup
+    .number()
+    .typeError("El precio debe ser un número")
+    .required("El precio es obligatorio")
+    .positive("El precio debe ser mayor a 0"),
+  quantity: yup
+    .number()
+    .typeError("La cantidad debe ser un número")
+    .required("La cantidad es obligatoria")
+    .min(1, "La cantidad debe ser al menos 1"),
+  description: yup
+    .string()
+    .required("La descripción es obligatoria")
+    .min(10, "La descripción debe tener al menos 10 caracteres"),
+});
 
 export const ProductForm = ({ productSelected, handlerAdd }) => {
-  const [form, setForm] = useState(productSelected || {
-      id: 0,
-      name: "",
-      price: "", 
-      quantity: "",
-      description: "",
-    });
-  const [ errors, setErrors ] = useState({});
-
-  const validation = () => {
-    const newErrors = {};
-    if (!form.name || form.name.trim().length < 3) {
-      newErrors.name = "El nombre debe tener al menos 3 caracteres.";
-    }
-    if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0) {
-      newErrors.price = "El precio debe ser un número mayor a 0.";
-    }
-    if (
-      !form.quantity ||
-      isNaN(Number(form.quantity)) ||
-      Number(form.quantity) < 1
-    ) {
-      newErrors.quantity = "La cantidad debe ser mayor o igual a 1.";
-    }
-    if (!form.description || form.description.trim().length < 10) {
-      newErrors.description =
-        "La descripción debe tener al menos 10 caracteres.";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // sincorniza el formulario con el producto selecionado
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: yupResolver(schema),
+    defaultValues: productSelected
+  });
+  // sincorniza el formulario cuando cambia el producto seleccionado
   useEffect(() => {
-    setForm(productSelected);
-  }, [productSelected]);
-  
-  const handleSubmit = (event) => {
-    event.preventDefault(); 
-    if (validation()) {
-      handlerAdd(form);
-      setForm({
-        id: 0,
-        name: "",
-        price: "",
-        quantity: "",
-        description: "",
-      });
-      setErrors({});
-    }
-  };
+    reset(productSelected);
+  }, [productSelected, reset]);
 
   return (
-    <form onSubmit={handleSubmit} className="form-inline">
-      <div>
+    <form onSubmit={handleSubmit(handlerAdd)} className="form-inline">
+      <div className="mb-3">
         <input
           type="text"
-          className="form-control my-3 w-75"
+          className={`form-control my-3 w-75 ${errors.name ? "is-invalid" : ""}`}
           name="Name"
           placeholder="name"
-          value={form.name}
-          onChange={(event) => setForm({ ...form, name: event.target.value })}
+          {...register("name")}
         />
-        {errors.name && <div className="alert alert-danger">{errors.name}</div>}
+        {errors.name && <div className="alert alert-danger">{errors.name.message}</div>}
       </div>
       <div>
         <input
           type="text"
-          className="form-control my-3 w-75"
+          className={`form-control my-3 w-75 ${errors.price ? "is-invalid" : ""}`}
           name="Price"
           placeholder="price"
-          value={form.price}
-          onChange={(event) => setForm({ ...form, price: event.target.value })}
+          {...register("price")}
         />
         {errors.price && (
-          <div className="alert alert-danger">{errors.price}</div>
+          <div className="alert alert-danger">{errors.price.message}</div>
         )}
       </div>
       <div>
         <input
           type="text"
-          className="form-control my-3 w-75"
+          className={`form-control my-3 w-75 ${errors.quantity ? "is-invalid" : ""}`}
           name="Quantity"
           placeholder="quantity"
-          value={form.quantity}
-          onChange={(event) =>
-            setForm({ ...form, quantity: event.target.value })
-          }
+          {...register("quantity")}
         />
         {errors.quantity && (
-          <div className="alert alert-danger">{errors.quantity}</div>
+          <div className="alert alert-danger">{errors.quantity.message}</div>
         )}
       </div>
       <div>
         <input
           type="text"
-          className="form-control my-3 w-75"
+          className={`form-control my-3 w-75 ${errors.description ? "is-invalid" : ""}`}
           name="Descripcion"
           placeholder="description"
-          value={form.description}
-          onChange={(event) =>
-            setForm({ ...form, description: event.target.value })
-          }
+          {...register("description")}
         />
         {errors.description && (
-          <div className="alert alert-danger">{errors.description}</div>
+          <div className="alert alert-danger">{errors.description.message}</div>
         )}
       </div>
       <div>
-        <button type="submit" className="btn btn-primary">
-          {form.id > 0 ? "Actualizar Producto" : "Agregar Producto"}
+        <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+          {/* {form.id > 0 ? "Actualizar Producto" : "Agregar Producto"} */}Guardar
         </button>
       </div>
     </form>

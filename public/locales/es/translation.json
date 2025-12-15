@@ -1,0 +1,11 @@
+{
+  "products": {
+    "title": "Productos!",
+    "newButton": "Nuevo Producto",
+    "noProducts": "No hay productos disponibles."
+  },
+  "actions": {
+    "edit": "Editar",
+    "remove": "Eliminar"
+  }
+}

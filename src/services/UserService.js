@@ -5,7 +5,7 @@ export const register = async (userData) => {
     console.log("=== REGISTER USER ===");
     console.log("UserData received:", userData);
 
-    const response = await apiUser.post(`/register`, userData);
+    const response = await apiUser.post("user/register", userData);
     return response.data;
   } catch (error) {
     throw error;
@@ -17,22 +17,25 @@ export const login = async (credentials) => {
     console.log("=== LOGIN USER SERVICE ===");
     console.log("credentials recibido:", credentials);
 
-    const response = await apiUser.post(`/user/login`, credentials);
-    return response;
+    const response = await apiUser.post("user/login", {
+      email: credentials.email,
+      password: credentials.password
+    });
+    return response.data.token;
   } catch (error) {
     throw error;
   }
 };
 
-export const getUserProfile = async (userId) =>{
+export const getUserProfile = async () =>{
   try{
-    const response = await apiUser.get(`/users/${userId}`);
+    const response = await apiUser.get(`user/me`);
     return response.data;
   }catch(error){
     throw error;
   }
-}
+};
 
 export const logout = () => {
   localStorage.removeItem("token");
-};
+}; 

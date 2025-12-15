@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ProductTable } from "./ProductTable";
 import { PropTypes } from "prop-types";
 import { ProductForm } from "./ProductForm";
@@ -15,9 +15,55 @@ import {
   selectProductsLoading,
 } from "../../features/selectors";
 import { Link } from "react-router-dom";
+import { Alert } from "../Alert";
+import { toast } from "react-toastify";
+import Modal from "react-bootstrap/Modal";
+import { useTranslation } from "react-i18next";
+
+//Spinner reutilizable
+const Spinner = () => (
+  <div className="d-flex justify-content-center mt-5">
+    <div className="spinner-border" role="status">
+      <span className="visually-hidden">Cargando...</span>
+    </div>
+  </div>
+);
+
+//Modal reutilizable para el formulario
+const ProductModal = ({ show, onClose, onSave, productSelected ={} }) => {
+  const product = productSelected || {
+    id: 0,
+    name: "",
+    price: "",
+    quantity: "",
+    description: "",
+  };
+  return (
+    <Modal show={show} onHide={onClose} aria-labelledby="modal-product-title"
+      centered
+      role="dialog">
+      <Modal.Header closeButton>
+        <Modal.Title id="modal-product-title">
+          {product.id > 0 ? "Editar Producto" : "Nuevo Producto"}
+        </Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <ProductForm handlerAdd={onSave} productSelected={product} />
+      </Modal.Body>
+    </Modal>
+  );
+};
+ProductModal.propTypes={
+  show: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSave: PropTypes.func.isRequired,
+  productSelected: PropTypes.object,
+}
 
 export const ProductApp = ({ title }) => {
+  const {t, i18n} = useTranslation();
   const dispatch = useDispatch();
+  const [showModal, setShowModal] = useState(false);
   //usamos los selectores memoizados
   const products = useSelector(selectProducts);
   const isLoading = useSelector(selectProductsLoading);
@@ -31,124 +77,145 @@ export const ProductApp = ({ title }) => {
     quantity: "",
     description: "",
   });
+  // 🔍 DEBUG
+  console.log('🔍 Products:', products);
+  console.log('📊 Is Array?:', Array.isArray(products));
+  console.log('⏳ Loading:', isLoading);
 
   useEffect(() => {
     if (isAuth) {
       dispatch(fetchProducts())
         .unwrap()
+        .then((data) => {
+          console.log('✅ Products loaded:', data);
+        })
         .catch((err) => {
-          setMessage({
-            type: "danger",
-            text: "Error al cargar productos: " + (err?.message || "Error desconocido"),
-          });
+          toast.error(
+            err?.message || "Ocurrió un error al cargar los productos"
+          );
         });
     }
   }, [dispatch, isAuth]);
+
+  const handlerAddProduct = useCallback(
+    async (product) => {
+      if (
+        !product.name ||
+        !product.price ||
+        !product.quantity ||
+        !product.description ||
+        isNaN(Number(product.price)) ||
+        isNaN(Number(product.quantity))
+      ) {
+        toast.error("Por favor, completa todos los campos correctamente.");
+        return;
+      }
+
+      const productSend = {
+        ...product,
+        price: Number(product.price),
+        quantity: Number(product.quantity),
+      };
+      try {
+        if (product.id > 0) {
+          await dispatch(updateProduct(productSend)).unwrap();
+          toast.success("Producto actualizado correctamente");
+          setTimeout(() => toast.dismiss(), 1000);
+        } else {
+          await dispatch(addProduct(productSend)).unwrap();
+          toast.success("Producto agregado correctamente");
+          setTimeout(() => toast.dismiss(), 1000);
+        }
+        setProductSelected({
+          id: 0,
+          name: "",
+          price: "",
+          quantity: "",
+          description: "",
+        });
+        setShowModal(false); // cerramos el modal
+      } catch (error) {
+        toast.error(
+          error?.message || "Ocurrió un error al guardar el producto"
+        );
+      }
+    },
+    [dispatch]
+  );
+
+  const handlerRemoveProduct = useCallback(
+    async (id) => {
+      try {
+        if (
+          window.confirm("¿Estás seguro de que deseas eliminar este producto?")
+        ) {
+          await dispatch(deleteProduct(id)).unwrap();
+          toast.success("Producto eliminado correctamente");
+          setTimeout(() => toast.dismiss(), 1000);
+        }
+      } catch (error) {
+        toast.error(error?.message || "Error al eliminar el producto");
+        setTimeout(() => toast.dismiss(), 1000);
+      }
+    },
+    [dispatch]
+  );
+
+  const handlerProductSelected = useCallback((product) => {
+    setProductSelected({ ...product });
+    setShowModal(true); // abrimos el modal
+  }, []);
+
+  const handlerNewProduct = useCallback(() => {
+    setProductSelected({
+      id: 0,
+      name: "",
+      price: "",
+      quantity: "",
+      description: "",
+    });
+    setShowModal(true); // abrimos el modal
+  }, []);
 
   if (!isAuth) {
     return (
       <div className="alert alert-warning text-center mt-5">
         <h4>Acceso Restringido</h4>
-        <p>Por favor, <Link to="/login">inicia sesión</Link> para ver y gestionar los productos.</p>
+        <p>
+          Por favor, <Link to="/login">inicia sesión</Link> para ver y gestionar
+          los productos.
+        </p>
       </div>
-    )
+    );
   }
-
-  const handlerAddProduct = async (product) => {
-    if (
-      !product.name ||
-      !product.price ||
-      !product.quantity ||
-      !product.description ||
-      isNaN(Number(product.price)) ||
-      isNaN(Number(product.quantity))
-    ) {
-      setMessage({
-        type: "danger",
-        text: "Debe completar todos los campos correctamente",
-      });
-      return;
-    }
-
-    const productSend = {
-      ...product,
-      price: Number(product.price),
-      quantity: Number(product.quantity),
-    };
-    try {
-      if (product.id > 0) {
-        await dispatch(updateProduct(productSend)).unwrap();
-        setMessage({
-          type: "success",
-          text: "Producto actualizado correctamente",
-        });
-      } else {
-        await dispatch(addProduct(productSend)).unwrap();
-        setMessage({
-          type: "success",
-          text: "Producto agregado correctamente",
-        });
-      }
-      setProductSelected({
-        id: 0,
-        name: "",
-        price: "",
-        quantity: "",
-        description: "",
-      });
-    } catch (error) {
-      setMessage({ type: "danger", text: error?.message || "Error al agregar el producto" });
-    }
-  };
-
-  const handlerRemoveProduct = async (id) => {
-    try {
-      await dispatch(deleteProduct(id)).unwrap();
-      setMessage({
-        type: "success",
-        text: "Producto eliminado correctamente",
-      });
-    } catch (error) {
-      setMessage({ type: "danger", text: "Error al eliminar el producto" });
-    }
-  };
-
-  const handlerProductSelected = (product) => {
-    setProductSelected({ ...product });
-  };
-
   return (
     <div className="container my-4">
-      <h1>{title}</h1>
+      <h1>{t("products.title")}</h1>
+      <button className="btn btn-primary mb-3" onClick={handlerNewProduct}>
+        {t("products.newButton")}
+      </button>
       {message && (
-        <div className={`alert alert-${message.type}`}>
-          {message.text}
-          <button 
-            type="button" 
-            className="btn-close" 
-            onClick={() => setMessage(null)}
-          ></button>
-        </div>
+        <Alert
+          type={message.type}
+          message={message.text}
+          onClose={() => setMessage(null)}
+        />
       )}
+      <ProductModal
+        show={showModal}
+        onClose={() => setShowModal(false)}
+        productSelected={productSelected}
+        onSave={handlerAddProduct}
+      />
       <div className="row">
         <div className="col">
-          <ProductForm
-            handlerAdd={handlerAddProduct}
-            productSelected={productSelected}
-          />
-        </div>
-        <div className="col">
           {isLoading ? (
-            <div className="d-flex justify-content-center mt-5">
-              <div className="spinner-border" role="status">
-                <span className="visually-hidden">Cargando...</span>
-              </div>
-            </div>
+            <Spinner />
           ) : products.length > 0 ? (
             <ProductTable
-              /* products={products}
+              products={Array.isArray(products) ? products : []}
               handlerRemove={handlerRemoveProduct}
-              handlerProductSelected={handlerProductSelected} */
+              handlerProductSelected={handlerProductSelected}
             />
           ) : (
             <div className="alert alert-warning">
@@ -164,4 +231,3 @@ export const ProductApp = ({ title }) => {
 ProductApp.propTypes = {
   title: PropTypes.string.isRequired,
 };
-//export { ProductApp };

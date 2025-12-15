@@ -7,7 +7,7 @@ const selectProductsState = (state) => state.products;
 // Selectores memoizados para auth
 export const selectIsAuth = createSelector(
   [selectAuth],
-  (auth) => !!auth?.isAuth 
+  (auth) => !!auth?.isAuth && !!auth?.token
 );
 
 export const selectUser = createSelector(
@@ -38,12 +38,17 @@ export const selectToken = createSelector(
 // Selectores memoizados para products
 export const selectProducts = createSelector(
   [selectProductsState],
-  (products) => products?.products || []
+  (productsState) => {
+    if(!productsState) return [];
+    if (Array.isArray(productsState.products)) return productsState.products;
+    if (Array.isArray(productsState.items)) return productsState.items;
+    return [];
+  }
 );
 
 export const selectProductsLoading = createSelector(
   [selectProductsState],
-  (products) => !!products?.loading
+  (products) => products?.status === 'loading'
 );
 
 export const selectProductsError = createSelector(
@@ -56,8 +61,13 @@ export const selectSelectedProduct = createSelector(
   (products) => products?.selectedProduct || null
 );
 
+export const selectProductsStatus = createSelector(
+  [selectProductsState],
+  (products) => products?.status || 'idle'
+);
 // Selector compuesto para verificar si hay productos
 export const selectHasProducts = createSelector(
   [selectProducts],
   (products) => Array.isArray(products) && products.length > 0
 );
+

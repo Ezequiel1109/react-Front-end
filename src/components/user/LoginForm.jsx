@@ -4,7 +4,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
 import { addLogin } from "../../features/authSlice";
 import { selectAuthLoading } from "../../features/selectors";
-
+import { Loader } from "../Loader";
+import { toast } from "react-toastify";
 
 export const LoginForm = () => {
   const navigate = useNavigate();
@@ -21,17 +22,13 @@ export const LoginForm = () => {
   } = useForm();
 
   const onSubmit = async (event) => {
-    /* event.preventDefault(); */
     setMessage(null);
     setServerErrors({});
     try {
       await dispatch(addLogin(event)).unwrap();
-      setMessage({
-        type: "success",
-        text: "Inicio de sesión exitoso.",
-      });
       reset();
-      setTimeout(() => navigate("/api/products"), 1000); // Redirige a la página principal después de 1 segundo
+      toast.success("Inicio de sesión exitoso.");
+      navigate("/products"); // Redirige a la página principal después de 1 segundo
     } catch (error) {
       // Captura el error lanzado por unwrap y Axios
       let backField = error?.response?.data?.field || error?.field;
@@ -41,39 +38,35 @@ export const LoginForm = () => {
         setServerErrors({ [backField]: backMessage });
         setMessage(null);      
       }else{
-        setMessage({
-          type: "danger",
-          text: backMessage || "Error al iniciar sesión.",
-        });
+        toast.error(backMessage || "Error al iniciar sesión.");
       }
     }
   };
   return (
     <div className="card mx-auto my-4" style={{ maxWidth: 400 }}>
+      {/* <Loader isLoading={isLoading} /> */}
+      {isLoading && <Loader />}
       <div className="card-body">
         <h4 className="card-title mb-4">Iniciar Sesión</h4>
-         {message && !serverErrors.username && !serverErrors.password && (
-          <div className={`alert alert-${message.type}`}>{message.text}</div>
-        )}
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <div className="mb-3">
             <input
               type="text"
               className={`form-control ${
-                errors.username || serverErrors.username ? "is-invalid" : ""
+                errors.email || serverErrors.email ? "is-invalid" : ""
               }`}
-              placeholder="Username"
-              {...register("username", {
-                required: "El nombre de usuario es obligatorio.",
-                minLength: {
-                  message:
-                    "El nombre de usuario debe tener al menos 3 caracteres.",
+              placeholder="Email"
+              {...register("email", {
+                required: "El correo electrónico es obligatorio.",
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                  message: "El correo electrónico no es válido.",
                 },
               })}
             />
-            {(errors.username || serverErrors.username) && (
+            {(errors.email || serverErrors.email) && (
               <div className="invalid-feedback d-block">
-                {errors.username?.message || serverErrors.username}
+                {errors.email?.message || serverErrors.email}
               </div>
             )}
           </div>
@@ -102,7 +95,7 @@ export const LoginForm = () => {
             className="btn btn-primary w-100"
             disabled={isSubmitting || isLoading}
           >
-            {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
+            {isLoading  ? "Iniciando sesión..." : "Iniciar Sesión"}
           </button>
         </form>
         <div className="form-footer">
